@@ -38,6 +38,10 @@ export default abstract class AzureAI {
     return new ModelClient(endpoint, apiKey, completionDefaults);
   }
 
+  public static getStatsigServer() {
+    return Statsig;
+  }
+
   public static async shutdown() {
     return await Statsig.shutdown();
   }
