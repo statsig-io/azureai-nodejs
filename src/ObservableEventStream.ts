@@ -1,7 +1,6 @@
 import { EventMessage } from "@azure/core-sse";
 
-export default class ObservableEventStream 
-  implements AsyncIterable<EventMessage> {
+export class ObservableEventStream implements AsyncIterable<EventMessage> {
   private baseStream: AsyncIterable<EventMessage>;
   private iterator: AsyncIterator<EventMessage>;
   private onMessage?: (message: EventMessage) => void;
@@ -27,7 +26,7 @@ export default class ObservableEventStream
           this.onMessage(value);
         }
         return { done, value };
-      }
-    }
+      },
+    };
   }
 }

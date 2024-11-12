@@ -1,11 +1,9 @@
-import * as AzureAiInference from '@azure-rest/ai-inference';
+import Statsig, { StatsigOptions } from "statsig-node";
 
-import Statsig, { StatsigOptions } from 'statsig-node';
+import { ModelClient } from "./ModelClient";
+import { getStatsigUser } from "./getStatsigUser";
 
-import ModelClient from './ModelClient';
-import getStatsigUser from './getStatsigUser';
-
-export default abstract class AzureAI {
+export abstract class AzureAI {
   public static async initialize(
     statsigServerKey: string,
     options?: StatsigOptions
@@ -15,7 +13,7 @@ export default abstract class AzureAI {
 
   public static getModelClientFromEndpoint(
     apiEndpoint: string,
-    apiKey: string,
+    apiKey: string
   ) {
     return new ModelClient(apiEndpoint, apiKey);
   }
@@ -23,16 +21,16 @@ export default abstract class AzureAI {
   public static getModelClient(
     dynamicConfigName: string,
     defaultEndpoint?: string,
-    defaultKey?: string,
+    defaultKey?: string
   ) {
     const config = Statsig.getConfigSync(getStatsigUser(), dynamicConfigName);
-    const endpoint = config.get('endpoint', defaultEndpoint);
-    const apiKey = config.get('key', defaultKey);
-    const completionDefaults = config.get('completion_defaults', {});
+    const endpoint = config.get("endpoint", defaultEndpoint);
+    const apiKey = config.get("key", defaultKey);
+    const completionDefaults = config.get("completion_defaults", {});
 
     if (!endpoint || !apiKey) {
-      const msg = 
-        'Invalid configuration for AzureAI.  API will return defaults.';
+      const msg =
+        "Invalid configuration for AzureAI.  API will return defaults.";
       throw new Error(msg);
     }
     return new ModelClient(endpoint, apiKey, completionDefaults);

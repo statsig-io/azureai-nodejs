@@ -1,17 +1,17 @@
-import { EventMessage, createSseStream } from '@azure/core-sse';
+import { EventMessage, createSseStream } from "@azure/core-sse";
 import {
   HttpBrowserStreamResponse,
   HttpNodeStreamResponse,
   PathUncheckedResponse,
-} from '@azure-rest/core-client';
-import Statsig, { StatsigUser } from 'statsig-node';
-import createClient, * as AzInf from '@azure-rest/ai-inference';
+} from "@azure-rest/core-client";
+import Statsig, { StatsigUser } from "statsig-node";
+import createClient, * as AzInf from "@azure-rest/ai-inference";
 
 import { AzureKeyCredential } from "@azure/core-auth";
-import ObservableEventStream from './ObservableEventStream';
-import getStatsigUser from './getStatsigUser';
+import { ObservableEventStream } from "./ObservableEventStream";
+import { getStatsigUser } from "./getStatsigUser";
 
-export type StreamableMethod<TResponse = PathUncheckedResponse> = 
+export type StreamableMethod<TResponse = PathUncheckedResponse> =
   PromiseLike<TResponse> & {
     asNodeStream: () => Promise<HttpNodeStreamResponse>;
     asBrowserStream: () => Promise<HttpBrowserStreamResponse>;
@@ -33,29 +33,29 @@ export type EmbeddingsOptions = {
   encoding_format?: string;
   input_type?: string;
   model?: string;
-}
+};
 
 type InvokeContext = {
   invokeTime: number;
 };
 
-export default class ModelClient {
+export class ModelClient {
   private apiEndpoint: string;
   private apiKey: string;
   private azureClient: AzInf.ModelClient;
   private completionDefaults: Partial<CompletionOptions>;
-  
+
   constructor(
     apiEndpoint: string,
     apiKey: string,
-    completionDefaults: Partial<CompletionOptions> = {},
+    completionDefaults: Partial<CompletionOptions> = {}
   ) {
     this.apiEndpoint = apiEndpoint;
     this.apiKey = apiKey;
     this.completionDefaults = completionDefaults;
     this.azureClient = createClient(
       apiEndpoint,
-      new AzureKeyCredential(apiKey),
+      new AzureKeyCredential(apiKey)
     );
 
     this.scrubDefaults();
@@ -64,20 +64,16 @@ export default class ModelClient {
   public async complete(
     messages: Array<AzInf.ChatRequestMessage>,
     options: CompletionOptions = {},
-    user: StatsigUser | {} = {},
+    user: StatsigUser | {} = {}
   ): Promise<AzInf.ChatCompletionsOutput> {
-    const ic = this.logInvoke(user, 'complete');
-    const response = await this.completeInternal(
-      messages,
-      options,
-      false,
-    );
-    
+    const ic = this.logInvoke(user, "complete");
+    const response = await this.completeInternal(messages, options, false);
+
     this.handleError(response);
     const body = (response as AzInf.GetChatCompletions200Response).body;
     this.logUsage(
       user,
-      'complete',
+      "complete",
       {
         model: body.model,
         completion_tokens: body.usage.completion_tokens,
@@ -85,7 +81,7 @@ export default class ModelClient {
         total_tokens: body.usage.total_tokens,
         created: body.created,
       },
-      ic,
+      ic
     );
     return body;
   }
@@ -93,21 +89,17 @@ export default class ModelClient {
   public async streamComplete(
     messages: Array<AzInf.ChatRequestMessage>,
     options: CompletionOptions = {},
-    user: StatsigUser | {} = {},
+    user: StatsigUser | {} = {}
   ): Promise<AsyncIterable<EventMessage>> {
-    const ic = this.logInvoke(user, 'stream');
-    const response = await this.completeInternal(
-      messages,
-      options,
-      true,
-    );
-    
+    const ic = this.logInvoke(user, "stream");
+    const response = await this.completeInternal(messages, options, true);
+
     this.handleError(response);
     const stream = (response as HttpBrowserStreamResponse).body;
-    
+
     const streamStart = Date.now();
     let model = null as string | null;
-    this.logUsage(user, 'stream_begin', {}, ic);
+    this.logUsage(user, "stream_begin", {}, ic);
     const iterable = new ObservableEventStream(
       createSseStream(stream),
       (message) => {
@@ -115,14 +107,18 @@ export default class ModelClient {
           try {
             const obj = JSON.parse(message.data);
             model = obj.model;
-          } catch (e) {
-          }
+          } catch (e) {}
         }
-        if (message.data === '[DONE]') {
-          this.logUsage(user, 'stream_end', {
-            stream_time_ms: Date.now() - streamStart,
-            model: model || 'unknown',
-          }, ic);
+        if (message.data === "[DONE]") {
+          this.logUsage(
+            user,
+            "stream_end",
+            {
+              stream_time_ms: Date.now() - streamStart,
+              model: model || "unknown",
+            },
+            ic
+          );
         }
       }
     );
@@ -130,22 +126,22 @@ export default class ModelClient {
   }
 
   public async getInfo(
-    user: StatsigUser | {} = {},
+    user: StatsigUser | {} = {}
   ): Promise<AzInf.ModelInfoOutput> {
-    const ic = this.logInvoke(user, 'getInfo');
-    const response = await this.azureClient.path('/info').get();
-    
+    const ic = this.logInvoke(user, "getInfo");
+    const response = await this.azureClient.path("/info").get();
+
     this.handleError(response);
     const body = (response as AzInf.GetModelInfo200Response).body;
     this.logUsage(
       user,
-      'getInfo',
+      "getInfo",
       {
         model_name: body.model_name,
         model_provider_name: body.model_provider_name,
         model_type: body.model_type,
       },
-      ic,
+      ic
     );
     return body;
   }
@@ -153,29 +149,29 @@ export default class ModelClient {
   public async getEmbeddings(
     input: string[],
     options: EmbeddingsOptions = {},
-    user: StatsigUser | {} = {},
+    user: StatsigUser | {} = {}
   ): Promise<AzInf.EmbeddingsResultOutput> {
-    const ic = this.logInvoke(user, 'getEmbeddings');
-    const response = await this.azureClient.path('/embeddings').post({
+    const ic = this.logInvoke(user, "getEmbeddings");
+    const response = await this.azureClient.path("/embeddings").post({
       body: {
         input,
         ...options,
       },
       headers: this.getHeaders(),
     });
-    
+
     this.handleError(response);
     const body = (response as AzInf.GetEmbeddings200Response).body;
     this.logUsage(
       user,
-      'getEmbeddings',
+      "getEmbeddings",
       {
         model: body.model,
         prompt_tokens: body.usage.prompt_tokens,
         total_tokens: body.usage.total_tokens,
         embedding_length: body.data.length,
       },
-      ic,
+      ic
     );
     return body;
   }
@@ -183,13 +179,13 @@ export default class ModelClient {
   private async completeInternal(
     messages: Array<AzInf.ChatRequestMessage>,
     options: CompletionOptions,
-    stream: boolean,
+    stream: boolean
   ): Promise<
-    AzInf.GetChatCompletions200Response |
-    AzInf.GetChatCompletionsDefaultResponse |
-    HttpBrowserStreamResponse
+    | AzInf.GetChatCompletions200Response
+    | AzInf.GetChatCompletionsDefaultResponse
+    | HttpBrowserStreamResponse
   > {
-    const postResponse = this.azureClient.path('/chat/completions').post({
+    const postResponse = this.azureClient.path("/chat/completions").post({
       body: {
         messages,
         stream,
@@ -198,7 +194,7 @@ export default class ModelClient {
       },
       headers: this.getHeaders(),
     });
-    
+
     if (stream) {
       return postResponse.asBrowserStream();
     } else {
@@ -217,13 +213,14 @@ export default class ModelClient {
     if (AzInf.isUnexpected(response)) {
       const error = response.body?.error;
       if (error) {
-        const details = 
-          error.details ? `\n${JSON.stringify(error.details)}` : '';
+        const details = error.details
+          ? `\n${JSON.stringify(error.details)}`
+          : "";
         throw new Error(`${error.code}: ${error.message}${details}`);
       }
       throw new Error(JSON.stringify(response.body));
     }
-    if (response.status !== '200') {
+    if (response.status !== "200") {
       throw new Error(`Unexpected status code: ${response}`);
     }
   }
@@ -239,8 +236,8 @@ export default class ModelClient {
 
   private logInvoke(user: StatsigUser | {}, method: string): InvokeContext {
     const su = getStatsigUser(user);
-    Statsig.logEvent(su, 'invoke', method, {
-      sdk_type: 'azureai-nodejs',
+    Statsig.logEvent(su, "invoke", method, {
+      sdk_type: "azureai-nodejs",
     });
     return {
       invokeTime: Date.now(),
@@ -251,7 +248,7 @@ export default class ModelClient {
     user: StatsigUser | {},
     method: string,
     usage: Record<string, string | number>,
-    context: InvokeContext | null = null,
+    context: InvokeContext | null = null
   ) {
     const su = getStatsigUser(user);
     let contextData = {};
@@ -260,8 +257,8 @@ export default class ModelClient {
         latency_ms: Date.now() - context.invokeTime,
       };
     }
-    Statsig.logEvent(su, 'usage', method, {
-      sdk_type: 'azureai-nodejs',
+    Statsig.logEvent(su, "usage", method, {
+      sdk_type: "azureai-nodejs",
       ...contextData,
       ...usage,
     });
