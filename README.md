@@ -31,7 +31,7 @@ const client = AzureAI.getModelClientFromEndpoint(
 Optionally, use a Statsig Dynamic Config to provide default configurations
 
 ```ts
-const client = AzureAI.getModelClient("azureai_model", <DEPLOYMENT_ENDPOINT_URL>, <DEPLOYMENT_KEY>);
+const client = AzureAI.getModelClient("azureai_model");
 ```
 
 4. Call the API
