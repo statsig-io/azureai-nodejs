@@ -1,5 +1,5 @@
 {
-  "name": "statsig-azureai",
+  "name": "@statsig/azure-ai",
   "version": "1.0.0",
   "main": "dist/src/index.js",
   "scripts": {
