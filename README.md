@@ -6,11 +6,11 @@ Statsig helps you move faster with Feature Gates (Feature Flags) and Dynamic Con
 
 ## Getting Started
 
-1. Install the library `npm install statsig-azureai`
+1. Install the library `npm install @statsig/azure-ai`
 2. Initialize the main AzureAI interface along with the internal Statsig service
 
 ```ts
-import { AzureAI, StatsigOptions } from "statsig-azureai";
+import { AzureAI, StatsigOptions } from "@statsig/azure-ai";
 
 const options: StatsigOptions = {
   environment: { tier: "development" },
