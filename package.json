@@ -1,6 +1,6 @@
 {
   "name": "@statsig/azure-ai",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "dist/src/index.js",
   "scripts": {
     "test": "tsc && node --env-file=.env --env-file=.env.local dist/samples/SampleApp.js"
